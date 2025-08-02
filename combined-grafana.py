@@ -47,6 +47,12 @@ env_sensor_noise_profile_high_gauge = Gauge('env_sensor_noise_profile_high', 'no
 env_sensor_amp_freq_100_200_gauge = Gauge('env_sensor_amp_freq_100_200', 'amplitudes at frequency range 100-200')
 env_sensor_amp_freq_500_600_gauge = Gauge('env_sensor_amp_freq_500_600', 'amplitudes at frequency range 500-600')
 env_sensor_amp_freq_1000_1200_gauge = Gauge('env_sensor_amp_freq_1000_1200', 'amplitudes at frequency range 1000-1200')
+env_sensor_pm_03_pl_gauge = Gauge('env_sensor_pm03_litre', 'particles >0.3um per 1/10 litre of air')
+env_sensor_pm_05_pl_gauge = Gauge('env_sensor_pm05_litre', 'particles >0.5um per 1/10 litre of air')
+env_sensor_pm_1_pl_gauge = Gauge('env_sensor_pm1_litre', 'particles >1um per 1/10 litre of air')
+env_sensor_pm_25_pl_gauge = Gauge('env_sensor_pm25_litre', 'particles >2.5um per 1/10 litre of air')
+env_sensor_pm_5_pl_gauge = Gauge('env_sensor_pm5_litre', 'particles >5um per 1/10 litre of air')
+env_sensor_pm_10_pl_gauge = Gauge('env_sensor_pm10_litre', 'particles >10um per 1/10 litre of air')
 
 
 noise = Noise()
@@ -222,6 +228,8 @@ def get_cpu_temperature():
 
 
 def main():
+    pms5003.reset()
+
     # Tuning factor for compensation. Decrease this number to adjust the
     # temperature down, and increase to adjust up
     factor = 2.25
@@ -406,16 +414,22 @@ def main():
             except (SerialTimeoutError, pmsReadTimeoutError):
                 logging.warning("Failed to read PMS5003")
             else:
-                raw_data = float(pms_data.pm_ug_per_m3(1.0))
-                save_data(7, raw_data)
+                raw_data = pms_data.pm_ug_per_m3(1.0)
+                save_data(7, float(raw_data))
                 env_sensor_pm1_gauge.set(raw_data)
-                raw_data = float(pms_data.pm_ug_per_m3(2.5))
-                save_data(8, raw_data)
+                raw_data = pms_data.pm_ug_per_m3(2.5)
+                save_data(8, float(raw_data))
                 env_sensor_pm25_gauge.set(raw_data)
-                raw_data = float(pms_data.pm_ug_per_m3(10))
-                save_data(9, raw_data)
+                raw_data = pms_data.pm_ug_per_m3(10)
+                save_data(9, float(raw_data))
                 env_sensor_pm10_gauge.set(raw_data)
                 display_everything()
+                env_sensor_pm_03_pl_gauge.set(pms_data.pm_per_1l_air(0.3))
+                env_sensor_pm_05_pl_gauge.set(pms_data.pm_per_1l_air(0.5))
+                env_sensor_pm_1_pl_gauge.set(pms_data.pm_per_1l_air(1))
+                env_sensor_pm_25_pl_gauge.set(pms_data.pm_per_1l_air(2.5))
+                env_sensor_pm_5_pl_gauge.set(pms_data.pm_per_1l_air(5))
+                env_sensor_pm_10_pl_gauge.set(pms_data.pm_per_1l_air(10))
             # get noise profile
             low, mid, high, amp = noise.get_noise_profile()
             low *= 128
@@ -435,6 +449,8 @@ def main():
             env_sensor_amp_freq_100_200_gauge.set(amps[0])
             env_sensor_amp_freq_500_600_gauge.set(amps[1])
             env_sensor_amp_freq_1000_1200_gauge.set(amps[2])
+        
+        time.sleep(30) # Sleep for 30 seconds before getting more data
 
 
 if __name__ == "__main__":
